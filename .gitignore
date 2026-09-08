@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+.metro-health-check*
+
+# Environment — never commit real keys.
+# .env.example is committed and holds the variable names with no values.
+.env
+.env*.local
+!.env.example
+
+# Native build artefacts and signing material
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+android/
+ios/
+
+# EAS
+.easignore
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

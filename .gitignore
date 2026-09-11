@@ -1,42 +1,42 @@
-# Dependencies
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
 
 # Expo
 .expo/
 dist/
 web-build/
-.metro-health-check*
+expo-env.d.ts
 
-# Environment — never commit real keys.
-# .env.example is committed and holds the variable names with no values.
-.env
-.env*.local
-!.env.example
-
-# Native build artefacts and signing material
+# Native
+.kotlin/
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-android/
-ios/
 
-# EAS
-.easignore
+# Metro
+.metro-health-check*
 
-# Logs
+# debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-*.log
 
-# Editors
-.idea/
-.vscode/
-*.swp
-
-# OS
+# macOS
 .DS_Store
-Thumbs.db
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android

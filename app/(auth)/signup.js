@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
+import { signUp} from '../../src/features/account/api';
 
 export default function Signup() {
   const [fullName, setFullName] = useState('');
@@ -42,15 +42,7 @@ if (!/[!@#$%^&*]/.test(password)) {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+    const { error } = await signUp(fullName, email, password);
 
     if (error) {
       Alert.alert('Sign Up Failed', error.message);
@@ -88,7 +80,7 @@ if (!/[!@#$%^&*]/.test(password)) {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Text style={ styles.hint}>Password must be at least 8 characters with uppercase, lowercase, number, and special character</Text>
+      <Text style={ styles.hint}>Password must be exactly 8 characters with uppercase, lowercase, number, and special character</Text>
 
       <Button title="Sign Up" onPress={handleSignup} />
     </View>

@@ -70,12 +70,17 @@ export default function Login() {
           <Text style={styles.forgot}>Forgot Password?</Text>
         </Pressable>
 
-        <Pressable style={styles.loginButton} onPress={handleLogin}>
+        <Pressable
+          style={styles.loginButton}
+          onPress={handleLogin}
+        >
           <Text style={styles.loginButtonText}>Login</Text>
         </Pressable>
 
         <View style={styles.signupRow}>
-          <Text style={styles.normalText}>Don't have an account? </Text>
+          <Text style={styles.normalText}>
+            Don't have an account?{' '}
+          </Text>
 
           <Pressable
             onPress={() => router.push('/(auth)/signup')}
@@ -184,3 +189,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+
+

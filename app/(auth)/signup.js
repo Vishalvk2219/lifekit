@@ -21,10 +21,13 @@ export default function Signup() {
       return;
     }
 
-    if (password.length < 8) {
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    if (!passwordRegex.test(password)) {
       Alert.alert(
         'Invalid Password',
-        'Password must be at least 8 characters long'
+        'Password must be of exactly 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.'
       );
       return;
     }
@@ -81,6 +84,7 @@ export default function Signup() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          maxLength={8}
         />
 
         <Text style={styles.hint}>
@@ -93,7 +97,9 @@ export default function Signup() {
         </Pressable>
 
         <View style={styles.loginRow}>
-          <Text style={styles.normalText}>Already have an account? </Text>
+          <Text style={styles.normalText}>
+            Already have an account?{' '}
+          </Text>
 
           <Pressable onPress={() => router.push('/(auth)/login')}>
             <Text style={styles.loginText}>Login</Text>
@@ -200,3 +206,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

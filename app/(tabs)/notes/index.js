@@ -1,103 +1,253 @@
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  FlatList,
+} from 'react-native';
+import { router } from 'expo-router';
+
 import { useAuth } from '../../../src/context/AuthContext';
 import {
-  createNote,
   getNotes,
+  searchNotes,
+  deleteNote,
+  toggleNotePin,
 } from '../../../src/features/notes/api';
 
 export default function Notes() {
   const { session } = useAuth();
 
-  const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState([]);
+  const [search, setSearch] = useState('');
 
-  const handleCreateNote = async () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (session?.user?.id) {
+        loadNotes(search);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search, session?.user?.id]);
+
+  async function loadNotes(searchText = '') {
     if (!session?.user?.id) {
-      Alert.alert('Error', 'You are not logged in.');
+      setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError('');
 
-    const { data, error } = await createNote(
-      session.user.id,
-      'Week 9 Test Note',
-      'This note proves that my Notes module can write to Supabase.'
+    const result = searchText.trim()
+      ? await searchNotes(session.user.id, searchText)
+      : await getNotes(session.user.id);
+
+    setLoading(false);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    setNotes(result.data || []);
+  }
+
+  async function handleDelete(noteId) {
+    Alert.alert(
+      'Delete Note',
+      'Are you sure you want to delete this note?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await deleteNote(noteId);
+
+            if (error) {
+              Alert.alert('Delete Failed', error.message);
+              return;
+            }
+
+            setNotes((current) =>
+              current.filter((note) => note.id !== noteId)
+            );
+          },
+        },
+      ]
+    );
+  }
+
+  async function handlePin(note) {
+    const { data, error } = await toggleNotePin(
+      note.id,
+      !note.is_pinned
     );
 
-    setLoading(false);
-
     if (error) {
-      Alert.alert('Create Note Failed', error.message);
+      Alert.alert('Update Failed', error.message);
       return;
     }
 
-    Alert.alert('Success', 'Note created successfully.');
-    setNotes((current) => [data, ...current]);
-  };
+    setNotes((current) =>
+      current
+        .map((item) =>
+          item.id === note.id ? data : item
+        )
+        .sort(
+          (a, b) =>
+            Number(b.is_pinned) - Number(a.is_pinned)
+        )
+    );
+  }
 
-  const handleLoadNotes = async () => {
-    if (!session?.user?.id) {
-      Alert.alert('Error', 'You are not logged in.');
-      return;
-    }
+  function renderNote({ item }) {
+    return (
+      <View style={styles.card}>
+        <Pressable
+          onPress={() =>
+            router.push(`/(tabs)/notes/${item.id}`)
+          }
+        >
+          <View style={styles.titleRow}>
+            <Text style={styles.noteTitle}>
+              {item.title}
+            </Text>
 
-    setLoading(true);
+            {item.is_pinned && (
+              <Text style={styles.pin}>📌</Text>
+            )}
+          </View>
 
-    const { data, error } = await getNotes(session.user.id);
+          <Text
+            style={styles.noteBody}
+            numberOfLines={3}
+          >
+            {item.body}
+          </Text>
+        </Pressable>
 
-    setLoading(false);
+        <View style={styles.actions}>
+          <Pressable
+            onPress={() => handlePin(item)}
+            style={styles.smallButton}
+          >
+            <Text>
+              {item.is_pinned ? 'Unpin' : 'Pin'}
+            </Text>
+          </Pressable>
 
-    if (error) {
-      Alert.alert('Load Notes Failed', error.message);
-      return;
-    }
+          <Pressable
+            onPress={() =>
+              router.push(`/(tabs)/notes/${item.id}`)
+            }
+            style={styles.smallButton}
+          >
+            <Text>Edit</Text>
+          </Pressable>
 
-    setNotes(data || []);
-  };
+          <Pressable
+            onPress={() => handleDelete(item.id)}
+            style={styles.deleteButton}
+          >
+            <Text style={styles.deleteText}>
+              Delete
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Notes</Text>
 
       <Text style={styles.subtitle}>
-        Week 9 Supabase Test
+        Write and organize your notes
       </Text>
 
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search title or body..."
+        style={styles.search}
+      />
+
       <Pressable
-        style={styles.button}
-        onPress={handleCreateNote}
-        disabled={loading}
+        style={styles.createButton}
+        onPress={() =>
+          router.push('/(tabs)/notes/new')
+        }
       >
-        <Text style={styles.buttonText}>
-          {loading ? 'Please wait...' : 'Create Test Note'}
+        <Text style={styles.createText}>
+          + Create Note
         </Text>
       </Pressable>
 
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={handleLoadNotes}
-        disabled={loading}
-      >
-        <Text style={styles.secondaryButtonText}>
-          Load My Notes
-        </Text>
-      </Pressable>
+      {loading && (
+        <ActivityIndicator
+          size="large"
+          style={styles.loader}
+        />
+      )}
 
-      <Text style={styles.heading}>My Notes</Text>
-
-      {notes.map((note) => (
-        <View style={styles.noteCard} key={note.id}>
-          <Text style={styles.noteTitle}>
-            {note.title}
+      {!loading && error ? (
+        <View style={styles.center}>
+          <Text style={styles.error}>
+            {error}
           </Text>
 
-          <Text style={styles.noteBody}>
-            {note.body}
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => loadNotes(search)}
+          >
+            <Text style={styles.retryText}>
+              Retry
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {!loading && !error && notes.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>
+            No notes yet
+          </Text>
+
+          <Text style={styles.emptyText}>
+            Create your first note.
           </Text>
         </View>
-      ))}
+      ) : null}
+
+      {!loading && !error && notes.length > 0 ? (
+        <FlatList
+          data={notes}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNote}
+          contentContainerStyle={styles.list}
+          refreshing={loading}
+          onRefresh={() => loadNotes(search)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -105,70 +255,131 @@ export default function Notes() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#F5F7FB',
+    padding: 20,
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: 'bold',
     marginTop: 40,
   },
 
   subtitle: {
     color: '#777',
-    marginTop: 5,
-    marginBottom: 25,
+    marginBottom: 18,
   },
 
-  button: {
+  search: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+
+  createButton: {
     backgroundColor: '#222',
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 15,
   },
 
-  buttonText: {
+  createText: {
     color: 'white',
     fontWeight: 'bold',
   },
 
-  secondaryButton: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DDD',
-  },
-
-  secondaryButtonText: {
-    color: '#222',
-    fontWeight: 'bold',
-  },
-
-  heading: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  loader: {
     marginTop: 30,
+  },
+
+  list: {
+    paddingBottom: 30,
+  },
+
+  card: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 14,
     marginBottom: 12,
   },
 
-  noteCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 
   noteTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
+    flex: 1,
+  },
+
+  pin: {
+    marginLeft: 8,
   },
 
   noteBody: {
-    marginTop: 6,
     color: '#666',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+
+  actions: {
+    flexDirection: 'row',
+    marginTop: 15,
+    gap: 8,
+  },
+
+  smallButton: {
+    backgroundColor: '#EEE',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+
+  deleteButton: {
+    backgroundColor: '#FFE5E5',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+
+  deleteText: {
+    color: 'red',
+  },
+
+  center: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+
+  emptyText: {
+    color: '#777',
+    marginTop: 5,
+  },
+
+  error: {
+    color: 'red',
+    textAlign: 'center',
+  },
+
+  retryButton: {
+    marginTop: 15,
+    backgroundColor: '#222',
+    padding: 12,
+    borderRadius: 8,
+  },
+
+  retryText: {
+    color: 'white',
   },
 });

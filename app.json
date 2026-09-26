@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.codecosmossteam.lifekit"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -25,5 +26,13 @@
       "expo-router",
       "@react-native-community/datetimepicker"
     ]
+      "expo-notifications"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a4f74706-a1aa-48ee-ae20-8fb82a6b7025"
+      }
+    }
   }
 }

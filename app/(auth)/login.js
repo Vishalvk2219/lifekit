@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from 'expo-router';
 import {View, Text, TextInput,Button, StyleSheet,Alert} from 'react-native';
 import {signIn} from '../../src/features/account/api';
 export default function Login() {
@@ -15,7 +16,12 @@ export default function Login() {
             Alert.alert('Login Failed', error.message);
             return;
         }
-        Alert.alert('Success', 'Logged in successfully');
+        Alert.alert('Success', 'Logged in successfully', [
+        {
+            text: 'OK',
+            onPress: () => router.replace('/(tabs)/tasks'),
+        },
+        ]);
     };
 
     return (

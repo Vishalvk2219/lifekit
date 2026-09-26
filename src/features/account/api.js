@@ -23,6 +23,25 @@ export async function signOut() {
   return await supabase.auth.signOut();
 }
 
-export async function forgotPassword(email) {
-  return await supabase.auth.resetPasswordForEmail(email);
+export async function sendResetOtp(email) {
+  return await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+    },
+  });
+}
+
+export async function verifyResetOtp(email, token) {
+  return await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'recovery',
+  });
+}
+
+export async function updatePassword(password) {
+  return await supabase.auth.updateUser({
+    password,
+  });
 }

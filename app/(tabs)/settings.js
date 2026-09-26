@@ -1,8 +1,19 @@
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ScrollView,
+} from 'react-native';
+
 import { router } from 'expo-router';
 import { signOut } from '../../src/features/account/api';
+import { useTheme } from '../../src/context/ThemeContext';
 
 export default function Settings() {
+  const { theme, themeMode, changeTheme } = useTheme();
+
   const handleSignOut = async () => {
     const { error } = await signOut();
 
@@ -16,66 +27,288 @@ export default function Settings() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={[
+        styles.container,
+        { backgroundColor: theme.background },
+      ]}
+      contentContainerStyle={styles.content}
+    >
 
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.icon}>⚙️</Text>
+
         <View>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
+          <Text
+            style={[
+              styles.title,
+              { color: theme.text },
+            ]}
+          >
+            Settings
+          </Text>
+
+          <Text
+            style={[
+              styles.subtitle,
+              { color: theme.secondaryText },
+            ]}
+          >
             Manage your LifeKit account
           </Text>
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Account</Text>
+      {/* Account Card */}
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: theme.text },
+          ]}
+        >
+          Account
+        </Text>
 
-        <View style={styles.option}>
+        {/* Profile */}
+        <Pressable
+          style={styles.option}
+          onPress={() =>
+            Alert.alert(
+              'Profile',
+              'Profile screen coming soon'
+            )
+          }
+        >
           <View>
-            <Text style={styles.optionTitle}>Profile</Text>
-            <Text style={styles.optionText}>
+            <Text
+              style={[
+                styles.optionTitle,
+                { color: theme.text },
+              ]}
+            >
+              Profile
+            </Text>
+
+            <Text
+              style={[
+                styles.optionText,
+                { color: theme.secondaryText },
+              ]}
+            >
               Manage your account information
             </Text>
           </View>
-          <Text style={styles.arrow}>›</Text>
-        </View>
 
-        <View style={styles.divider} />
+          <Text
+            style={[
+              styles.arrow,
+              { color: theme.secondaryText },
+            ]}
+          >
+            ›
+          </Text>
+        </Pressable>
 
-        <View style={styles.option}>
+        <View
+          style={[
+            styles.divider,
+            { backgroundColor: theme.border },
+          ]}
+        />
+
+        {/* Notifications */}
+        <Pressable
+          style={styles.option}
+          onPress={() =>
+            Alert.alert(
+              'Notifications',
+              'Notification preferences coming soon'
+            )
+          }
+        >
           <View>
-            <Text style={styles.optionTitle}>Notifications</Text>
-            <Text style={styles.optionText}>
+            <Text
+              style={[
+                styles.optionTitle,
+                { color: theme.text },
+              ]}
+            >
+              Notifications
+            </Text>
+
+            <Text
+              style={[
+                styles.optionText,
+                { color: theme.secondaryText },
+              ]}
+            >
               Manage notification preferences
             </Text>
           </View>
-          <Text style={styles.arrow}>›</Text>
+
+          <Text
+            style={[
+              styles.arrow,
+              { color: theme.secondaryText },
+            ]}
+          >
+            ›
+          </Text>
+        </Pressable>
+
+        <View
+          style={[
+            styles.divider,
+            { backgroundColor: theme.border },
+          ]}
+        />
+
+        {/* Theme */}
+        <View>
+          <Text
+            style={[
+              styles.optionTitle,
+              { color: theme.text },
+            ]}
+          >
+            Theme
+          </Text>
+
+          <Text
+            style={[
+              styles.optionText,
+              { color: theme.secondaryText },
+            ]}
+          >
+            Choose your app theme
+          </Text>
+
+          <View style={styles.themeButtons}>
+
+            {/* Light */}
+            <Pressable
+              style={[
+                styles.themeButton,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.card,
+                },
+                themeMode === 'light' && {
+                  borderWidth: 2,
+                  borderColor: theme.text,
+                },
+              ]}
+              onPress={() => changeTheme('light')}
+            >
+              <Text
+                style={[
+                  styles.themeButtonText,
+                  { color: theme.text },
+                ]}
+              >
+                ☀️ Light
+              </Text>
+            </Pressable>
+
+            {/* Dark */}
+            <Pressable
+              style={[
+                styles.themeButton,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.card,
+                },
+                themeMode === 'dark' && {
+                  borderWidth: 2,
+                  borderColor: theme.text,
+                },
+              ]}
+              onPress={() => changeTheme('dark')}
+            >
+              <Text
+                style={[
+                  styles.themeButtonText,
+                  { color: theme.text },
+                ]}
+              >
+                🌙 Dark
+              </Text>
+            </Pressable>
+
+          </View>
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Account Actions</Text>
+      {/* Account Actions */}
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: theme.text },
+          ]}
+        >
+          Account Actions
+        </Text>
 
         <Pressable
-          style={styles.logoutButton}
+          style={[
+            styles.logoutButton,
+            {
+              backgroundColor: theme.button,
+            },
+          ]}
           onPress={handleSignOut}
         >
-          <Text style={styles.logoutText}>Sign Out</Text>
+          <Text
+            style={[
+              styles.logoutText,
+              { color: theme.buttonText },
+            ]}
+          >
+            Sign Out
+          </Text>
         </Pressable>
       </View>
 
-      <Text style={styles.version}>LifeKit • Account & Settings</Text>
+      <Text
+        style={[
+          styles.version,
+          { color: theme.secondaryText },
+        ]}
+      >
+        LifeKit • Account & Settings
+      </Text>
 
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+  },
+
+  content: {
     padding: 20,
+    paddingBottom: 40,
   },
 
   header: {
@@ -93,27 +326,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: 'black',
   },
 
   subtitle: {
     fontSize: 13,
-    color: 'gray',
     marginTop: 3,
   },
 
   card: {
-    backgroundColor: 'white',
     borderRadius: 18,
     padding: 20,
     marginBottom: 18,
     elevation: 3,
+    borderWidth: 1,
   },
 
   sectionTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: 'black',
     marginBottom: 16,
   },
 
@@ -127,44 +357,54 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'black',
   },
 
   optionText: {
     fontSize: 12,
-    color: 'gray',
     marginTop: 4,
   },
 
   arrow: {
     fontSize: 28,
-    color: 'gray',
   },
 
   divider: {
     height: 1,
-    backgroundColor: 'lightgray',
     marginVertical: 15,
   },
 
+  themeButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+
+  themeButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+
+  themeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   logoutButton: {
-    backgroundColor: 'black',
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
   },
 
   logoutText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
 
   version: {
     textAlign: 'center',
-    color: 'gray',
     fontSize: 12,
-    marginTop: 'auto',
-    marginBottom: 15,
+    marginTop: 10,
   },
 });

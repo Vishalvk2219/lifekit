@@ -27,12 +27,7 @@ export default function Login() {
       return;
     }
 
-    Alert.alert('Success', 'Logged in successfully', [
-      {
-        text: 'OK',
-        onPress: () => router.replace('/(tabs)/tasks'),
-      },
-    ]);
+   router.replace('/(tabs)/dashboard');
   };
 
   return (

@@ -27,7 +27,12 @@ export default function Login() {
       return;
     }
 
-    Alert.alert('Success', 'Logged in successfully');
+    Alert.alert('Success', 'Logged in successfully', [
+      {
+        text: 'OK',
+        onPress: () => router.replace('/(tabs)/tasks'),
+      },
+    ]);
   };
 
   return (
@@ -189,6 +194,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-
-

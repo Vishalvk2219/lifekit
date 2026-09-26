@@ -190,6 +190,16 @@ export default function Notes() {
         placeholder="Search title or body..."
         style={styles.search}
       />
+      <Pressable
+        style={styles.shoppingButton}
+        onPress={() =>
+          router.push('/(tabs)/notes/lists')
+        }
+      >
+        <Text style={styles.shoppingText}>
+          🛒 Shopping Lists
+        </Text>
+      </Pressable>
 
       <Pressable
         style={styles.createButton}
@@ -258,6 +268,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
     padding: 20,
   },
+
+  shoppingButton: {
+  backgroundColor: '#EDEDED',
+  padding: 14,
+  borderRadius: 12,
+  alignItems: 'center',
+  marginBottom: 10,
+},
+
+shoppingText: {
+  fontWeight: 'bold',
+},
 
   title: {
     fontSize: 32,

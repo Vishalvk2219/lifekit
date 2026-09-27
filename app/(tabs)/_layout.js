@@ -3,22 +3,32 @@ import { Text } from 'react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function TabsLayout() {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
 
-        tabBarActiveTintColor: theme.text,
-        tabBarInactiveTintColor: theme.secondaryText,
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.secondaryText,
 
         tabBarStyle: {
-          backgroundColor: theme.card,
-          borderTopColor: theme.border,
+          position: 'absolute',
+          left: 10,
+          right: 10,
+          bottom: 50,
+
           height: 60,
-          paddingTop: 4,
+
+          paddingTop: 2,
           paddingBottom: 4,
+
+          backgroundColor: colors.tabBackground,
+          borderTopColor: colors.border,
+          borderRadius: 18,
+
+          elevation: 5,
         },
 
         tabBarLabelStyle: {
@@ -27,7 +37,7 @@ export default function TabsLayout() {
         },
 
         tabBarIconStyle: {
-          marginBottom: -2,
+          marginBottom: 1,
         },
       }}
     >

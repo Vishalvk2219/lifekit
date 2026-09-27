@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 
+// Get shopping lists
 // Get all shopping lists
 export async function getShoppingLists(userId) {
   const { data, error } = await supabase
@@ -11,6 +12,8 @@ export async function getShoppingLists(userId) {
   return { data, error };
 }
 
+// Create a shopping list
+export async function createShoppingList(userId, name) {
 // Create shopping list
 export async function createShoppingList(
   userId,
@@ -27,6 +30,8 @@ export async function createShoppingList(
     .from('shopping_lists')
     .insert({
       user_id: userId,
+      name,
+    })
       name: name.trim(),
     })
     .select()
@@ -59,6 +64,7 @@ export async function updateShoppingList(
   return { data, error };
 }
 
+// Get items inside a shopping list
 // Delete shopping list
 export async function deleteShoppingList(listId) {
   const { error } = await supabase
@@ -81,6 +87,8 @@ export async function getShoppingItems(listId) {
   return { data, error };
 }
 
+// Add a shopping item
+export async function createShoppingItem(listId, name, quantity = 1) {
 // Add item
 export async function createShoppingItem(
   listId,
@@ -112,6 +120,8 @@ export async function createShoppingItem(
     .from('shopping_items')
     .insert({
       list_id: listId,
+      name,
+      quantity,
       name: name.trim(),
       quantity: numericQuantity,
       is_purchased: false,
@@ -122,6 +132,11 @@ export async function createShoppingItem(
   return { data, error };
 }
 
+// Mark item as purchased/unpurchased
+export async function updateShoppingItem(itemId, isPurchased) {
+  const { data, error } = await supabase
+    .from('shopping_items')
+    .update({
 // Update item
 export async function updateShoppingItem(
   itemId,
@@ -164,6 +179,22 @@ export async function updateShoppingItem(
   return { data, error };
 }
 
+// Delete shopping item
+export async function deleteShoppingItem(itemId) {
+  const { error } = await supabase
+    .from('shopping_items')
+    .delete()
+    .eq('id', itemId);
+
+  return { error };
+}
+
+// Delete shopping list
+export async function deleteShoppingList(listId) {
+  const { error } = await supabase
+    .from('shopping_lists')
+    .delete()
+    .eq('id', listId);
 // Mark purchased/unpurchased
 export async function toggleShoppingItem(
   itemId,

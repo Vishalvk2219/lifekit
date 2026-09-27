@@ -1,3 +1,4 @@
+import { supabase } from "../../lib/supabase";
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -14,6 +15,15 @@ export async function getExpenses() {
   }
 
   if (!user) {
+    throw new Error("You must be signed in to view expenses.");
+  }
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("spent_on", { ascending: false })
+    .order("created_at", { ascending: false });
     throw new Error('You must be signed in to view expenses.');
   }
 
@@ -63,11 +73,13 @@ export async function getExpenseById(id) {
 }
 
 /**
+ * Create one expense for the signed-in user.
  * Create an expense.
  */
 export async function createExpense({
   title,
   amount,
+  category = "other",
   category = 'other',
   spentOn,
 }) {
@@ -81,12 +93,22 @@ export async function createExpense({
   }
 
   if (!user) {
+    throw new Error("You must be signed in to add an expense.");
     throw new Error('You must be signed in to add an expense.');
   }
 
   const numericAmount = Number(amount);
 
   if (!title?.trim()) {
+    throw new Error("Expense title is required.");
+  }
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new Error("Expense amount must be greater than 0.");
+  }
+
+  const { data, error } = await supabase
+    .from("expenses")
     throw new Error('Expense title is required.');
   }
 

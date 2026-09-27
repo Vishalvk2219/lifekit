@@ -1,5 +1,8 @@
 import { supabase } from '../../lib/supabase';
 
+// Get all notes for the signed-in user
+export async function getNotes(userId) {
+  const { data, error } = await supabase 
 // Get all notes
 export async function getNotes(userId) {
   const { data, error } = await supabase
@@ -21,6 +24,11 @@ export async function searchNotes(userId, searchText) {
     .order('is_pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 
+  return { data, error };
+}
+
+// Create one note
+export async function createNote(userId, title, body) {
   if (searchText?.trim()) {
     const search = searchText.trim();
 
@@ -65,6 +73,8 @@ export async function createNote(userId, title, body) {
     .from('notes')
     .insert({
       user_id: userId,
+      title,
+      body,
       title: title.trim(),
       body: body.trim(),
       is_pinned: false,
@@ -76,6 +86,12 @@ export async function createNote(userId, title, body) {
 }
 
 // Update a note
+export async function updateNote(noteId, title, body, isPinned) {
+  const { data, error } = await supabase
+    .from('notes')
+    .update({
+      title,
+      body,
 export async function updateNote(
   noteId,
   title,

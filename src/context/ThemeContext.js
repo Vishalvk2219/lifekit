@@ -1,67 +1,52 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokens } from '../theme/tokens';
 
 const ThemeContext = createContext();
 
-const lightTheme = {
-  background: '#F5F7FB',
-  card: '#FFFFFF',
-  text: '#222222',
-  secondaryText: '#777777',
-  border: '#DDDDDD',
-  button: '#222222',
-  buttonText: '#FFFFFF',
-};
-
-const darkTheme = {
-  background: '#121212',
-  card: '#1E1E1E',
-  text: '#FFFFFF',
-  secondaryText: '#AAAAAA',
-  border: '#333333',
-  button: '#000000',
-  buttonText: '#FFFFFF',
-};
-
 export function ThemeProvider({ children }) {
-  const [themeMode, setThemeMode] = useState('light');
+  const [theme, setThemeState] = useState('light');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem('lifekit-theme');
+
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          setThemeState(savedTheme);
+        }
+      } catch (error) {
+        console.log('Theme load error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadTheme();
   }, []);
 
-  const loadTheme = async () => {
-    try {
-      const savedTheme = await AsyncStorage.getItem('theme');
+  const changeTheme = async (newTheme) => {
+    setThemeState(newTheme);
 
-      if (savedTheme) {
-        setThemeMode(savedTheme);
-      }
-    } catch (error) {
-      console.log('Theme load error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const changeTheme = async (mode) => {
     try {
-      setThemeMode(mode);
-      await AsyncStorage.setItem('theme', mode);
+      await AsyncStorage.setItem('lifekit-theme', newTheme);
     } catch (error) {
       console.log('Theme save error:', error);
     }
   };
 
-  const theme = themeMode === 'dark' ? darkTheme : lightTheme;
+  const colors =
+    theme === 'dark'
+      ? tokens.colors.dark
+      : tokens.colors.light;
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        themeMode,
-        changeTheme,
+        colors,
+        setTheme: changeTheme,
         loading,
       }}
     >

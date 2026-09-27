@@ -12,7 +12,7 @@ import { signOut } from '../../src/features/account/api';
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function Settings() {
-  const { theme, themeMode, changeTheme } = useTheme();
+  const { theme, colors, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -30,7 +30,7 @@ export default function Settings() {
     <ScrollView
       style={[
         styles.container,
-        { backgroundColor: theme.background },
+        { backgroundColor: colors.background },
       ]}
       contentContainerStyle={styles.content}
     >
@@ -43,7 +43,7 @@ export default function Settings() {
           <Text
             style={[
               styles.title,
-              { color: theme.text },
+              { color: colors.text },
             ]}
           >
             Settings
@@ -52,7 +52,7 @@ export default function Settings() {
           <Text
             style={[
               styles.subtitle,
-              { color: theme.secondaryText },
+              { color: colors.secondaryText },
             ]}
           >
             Manage your LifeKit account
@@ -65,15 +65,15 @@ export default function Settings() {
         style={[
           styles.card,
           {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
+            backgroundColor: colors.card,
+            borderColor: colors.border,
           },
         ]}
       >
         <Text
           style={[
             styles.sectionTitle,
-            { color: theme.text },
+            { color: colors.text },
           ]}
         >
           Account
@@ -93,7 +93,7 @@ export default function Settings() {
             <Text
               style={[
                 styles.optionTitle,
-                { color: theme.text },
+                { color: colors.text },
               ]}
             >
               Profile
@@ -102,7 +102,7 @@ export default function Settings() {
             <Text
               style={[
                 styles.optionText,
-                { color: theme.secondaryText },
+                { color: colors.secondaryText },
               ]}
             >
               Manage your account information
@@ -112,7 +112,7 @@ export default function Settings() {
           <Text
             style={[
               styles.arrow,
-              { color: theme.secondaryText },
+              { color: colors.secondaryText },
             ]}
           >
             ›
@@ -122,7 +122,7 @@ export default function Settings() {
         <View
           style={[
             styles.divider,
-            { backgroundColor: theme.border },
+            { backgroundColor: colors.border },
           ]}
         />
 
@@ -140,7 +140,7 @@ export default function Settings() {
             <Text
               style={[
                 styles.optionTitle,
-                { color: theme.text },
+                { color: colors.text },
               ]}
             >
               Notifications
@@ -149,7 +149,7 @@ export default function Settings() {
             <Text
               style={[
                 styles.optionText,
-                { color: theme.secondaryText },
+                { color: colors.secondaryText },
               ]}
             >
               Manage notification preferences
@@ -159,7 +159,7 @@ export default function Settings() {
           <Text
             style={[
               styles.arrow,
-              { color: theme.secondaryText },
+              { color: colors.secondaryText },
             ]}
           >
             ›
@@ -169,7 +169,7 @@ export default function Settings() {
         <View
           style={[
             styles.divider,
-            { backgroundColor: theme.border },
+            { backgroundColor: colors.border },
           ]}
         />
 
@@ -178,7 +178,7 @@ export default function Settings() {
           <Text
             style={[
               styles.optionTitle,
-              { color: theme.text },
+              { color: colors.text },
             ]}
           >
             Theme
@@ -187,7 +187,7 @@ export default function Settings() {
           <Text
             style={[
               styles.optionText,
-              { color: theme.secondaryText },
+              { color: colors.secondaryText },
             ]}
           >
             Choose your app theme
@@ -200,20 +200,20 @@ export default function Settings() {
               style={[
                 styles.themeButton,
                 {
-                  borderColor: theme.border,
-                  backgroundColor: theme.card,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
                 },
-                themeMode === 'light' && {
+                theme === 'light' && {
                   borderWidth: 2,
-                  borderColor: theme.text,
+                  borderColor: colors.text,
                 },
               ]}
-              onPress={() => changeTheme('light')}
+              onPress={() => setTheme('light')}
             >
               <Text
                 style={[
                   styles.themeButtonText,
-                  { color: theme.text },
+                  { color: colors.text },
                 ]}
               >
                 ☀️ Light
@@ -225,20 +225,20 @@ export default function Settings() {
               style={[
                 styles.themeButton,
                 {
-                  borderColor: theme.border,
-                  backgroundColor: theme.card,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
                 },
-                themeMode === 'dark' && {
+                theme === 'dark' && {
                   borderWidth: 2,
-                  borderColor: theme.text,
+                  borderColor: colors.text,
                 },
               ]}
-              onPress={() => changeTheme('dark')}
+              onPress={() => setTheme('dark')}
             >
               <Text
                 style={[
                   styles.themeButtonText,
-                  { color: theme.text },
+                  { color: colors.text },
                 ]}
               >
                 🌙 Dark
@@ -254,15 +254,15 @@ export default function Settings() {
         style={[
           styles.card,
           {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
+            backgroundColor: colors.card,
+            borderColor: colors.border,
           },
         ]}
       >
         <Text
           style={[
             styles.sectionTitle,
-            { color: theme.text },
+            { color: colors.text },
           ]}
         >
           Account Actions
@@ -272,7 +272,7 @@ export default function Settings() {
           style={[
             styles.logoutButton,
             {
-              backgroundColor: theme.button,
+              backgroundColor: colors.button,
             },
           ]}
           onPress={handleSignOut}
@@ -280,7 +280,7 @@ export default function Settings() {
           <Text
             style={[
               styles.logoutText,
-              { color: theme.buttonText },
+              { color: colors.buttonText },
             ]}
           >
             Sign Out
@@ -291,7 +291,7 @@ export default function Settings() {
       <Text
         style={[
           styles.version,
-          { color: theme.secondaryText },
+          { color: colors.secondaryText },
         ]}
       >
         LifeKit • Account & Settings

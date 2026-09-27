@@ -20,19 +20,25 @@ export const tokens = {
 
   colors: {
     light: {
-      background: '#F5F7FB',
-      text: '#222222',
+      background: '#F5F6FA',
       card: '#FFFFFF',
-      border: '#DDDDDD',
+      text: '#222222',
       secondaryText: '#777777',
+      border: '#DDDDDD',
+      button: '#222222',
+      buttonText: '#FFFFFF',
+      tabBackground: '#FFFFFF',
     },
 
     dark: {
       background: '#121212',
-      text: '#FFFFFF',
       card: '#1E1E1E',
-      border: '#333333',
+      text: '#FFFFFF',
       secondaryText: '#AAAAAA',
+      border: '#333333',
+      button: '#000000',
+      buttonText: '#FFFFFF',
+      tabBackground: '#1E1E1E',
     },
   },
 };

@@ -1,9 +1,5 @@
 import { supabase } from '../../lib/supabase';
 
-// Get all notes for the signed-in user
-export async function getNotes(userId) {
-  const { data, error } = await supabase 
-// Get all notes
 export async function getNotes(userId) {
   const { data, error } = await supabase
     .from('notes')
@@ -15,7 +11,6 @@ export async function getNotes(userId) {
   return { data, error };
 }
 
-// Search notes by title or body
 export async function searchNotes(userId, searchText) {
   let query = supabase
     .from('notes')
@@ -24,13 +19,8 @@ export async function searchNotes(userId, searchText) {
     .order('is_pinned', { ascending: false })
     .order('updated_at', { ascending: false });
 
-  return { data, error };
-}
-
-// Create one note
-export async function createNote(userId, title, body) {
   if (searchText?.trim()) {
-    const search = searchText.trim();
+    const search = searchText.trim().replace(/[%_]/g, '\\$&');
 
     query = query.or(
       `title.ilike.%${search}%,body.ilike.%${search}%`
@@ -42,7 +32,6 @@ export async function createNote(userId, title, body) {
   return { data, error };
 }
 
-// Get one note
 export async function getNote(noteId) {
   const { data, error } = await supabase
     .from('notes')
@@ -53,7 +42,6 @@ export async function getNote(noteId) {
   return { data, error };
 }
 
-// Create a note
 export async function createNote(userId, title, body) {
   if (!title?.trim()) {
     return {
@@ -73,8 +61,6 @@ export async function createNote(userId, title, body) {
     .from('notes')
     .insert({
       user_id: userId,
-      title,
-      body,
       title: title.trim(),
       body: body.trim(),
       is_pinned: false,
@@ -85,13 +71,6 @@ export async function createNote(userId, title, body) {
   return { data, error };
 }
 
-// Update a note
-export async function updateNote(noteId, title, body, isPinned) {
-  const { data, error } = await supabase
-    .from('notes')
-    .update({
-      title,
-      body,
 export async function updateNote(
   noteId,
   title,
@@ -127,7 +106,6 @@ export async function updateNote(
   return { data, error };
 }
 
-// Pin or unpin a note
 export async function toggleNotePin(noteId, isPinned) {
   const { data, error } = await supabase
     .from('notes')
@@ -142,7 +120,6 @@ export async function toggleNotePin(noteId, isPinned) {
   return { data, error };
 }
 
-// Delete a note
 export async function deleteNote(noteId) {
   const { error } = await supabase
     .from('notes')
@@ -150,4 +127,35 @@ export async function deleteNote(noteId) {
     .eq('id', noteId);
 
   return { error };
+}
+
+// Week 11 Dashboard summary
+export async function getSummary(userId) {
+  const { data, error } = await supabase
+    .from('notes')
+    .select('is_pinned')
+    .eq('user_id', userId);
+
+  if (error) {
+    return {
+      data: null,
+      error,
+    };
+  }
+
+  const total = data?.length ?? 0;
+
+  const pinned = (data || []).filter(
+    (note) => note.is_pinned
+  ).length;
+
+  return {
+    data: {
+      title: 'Notes',
+      value: String(total),
+      caption: `${pinned} pinned`,
+      href: '/(tabs)/notes',
+    },
+    error: null,
+  };
 }

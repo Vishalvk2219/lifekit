@@ -1,53 +1,109 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+} from 'react';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { tokens } from '../theme/tokens';
 
-const ThemeContext = createContext();
+const ThemeContext = createContext(null);
+
+const initialState = {
+  theme: 'light',
+  loading: true,
+};
+
+function themeReducer(state, action) {
+  switch (action.type) {
+    case 'LOAD_THEME':
+      return {
+        theme: action.payload,
+        loading: false,
+      };
+
+    case 'SET_THEME':
+      return {
+        ...state,
+        theme: action.payload,
+      };
+
+    default:
+      return state;
+  }
+}
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState('light');
-  const [loading, setLoading] = useState(true);
+  const [state, dispatch] = useReducer(
+    themeReducer,
+    initialState
+  );
 
   useEffect(() => {
-    const loadTheme = async () => {
+    async function loadTheme() {
       try {
-        const savedTheme = await AsyncStorage.getItem('lifekit-theme');
+        const savedTheme =
+          await AsyncStorage.getItem(
+            'lifekit-theme'
+          );
 
-        if (savedTheme === 'dark' || savedTheme === 'light') {
-          setThemeState(savedTheme);
-        }
+        const theme =
+          savedTheme === 'dark' ||
+          savedTheme === 'light'
+            ? savedTheme
+            : 'light';
+
+        dispatch({
+          type: 'LOAD_THEME',
+          payload: theme,
+        });
       } catch (error) {
-        console.log('Theme load error:', error);
-      } finally {
-        setLoading(false);
+        dispatch({
+          type: 'LOAD_THEME',
+          payload: 'light',
+        });
       }
-    };
+    }
 
     loadTheme();
   }, []);
 
-  const changeTheme = async (newTheme) => {
-    setThemeState(newTheme);
+  async function setTheme(newTheme) {
+    dispatch({
+      type: 'SET_THEME',
+      payload: newTheme,
+    });
 
     try {
-      await AsyncStorage.setItem('lifekit-theme', newTheme);
+      await AsyncStorage.setItem(
+        'lifekit-theme',
+        newTheme
+      );
     } catch (error) {
-      console.log('Theme save error:', error);
+      // The UI still uses the selected theme.
     }
-  };
+  }
 
   const colors =
-    theme === 'dark'
+    state.theme === 'dark'
       ? tokens.colors.dark
       : tokens.colors.light;
+
+  // Wait until AsyncStorage has been checked.
+  // This prevents the light-theme flash.
+  if (state.loading) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider
       value={{
-        theme,
+        theme: state.theme,
         colors,
-        setTheme: changeTheme,
-        loading,
+        setTheme,
+        loading: state.loading,
       }}
     >
       {children}

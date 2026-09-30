@@ -45,3 +45,39 @@ export async function updatePassword(password) {
     password,
   });
 }
+
+export async function getProfile() {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    return { data: null, error: userError };
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  return { data, error };
+}
+
+export async function getCurrentUser() {
+  const { data, error } = await supabase.auth.getUser();
+
+  return {
+    user: data?.user ?? null,
+    error,
+  };
+}
+
+export async function updateProfile(fullName) {
+  return await supabase.auth.updateUser({
+    data: {
+      full_name: fullName,
+    },
+  });
+}

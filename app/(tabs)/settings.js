@@ -5,14 +5,66 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
 
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { signOut } from '../../src/features/account/api';
+
+import {
+  signOut,
+  getCurrentUser,
+  updateProfile,
+} from '../../src/features/account/api';
+
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function Settings() {
   const { theme, colors, setTheme } = useTheme();
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    const { user, error } = await getCurrentUser();
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
+    if (user) {
+      setFullName(user.user_metadata?.full_name || '');
+      setEmail(user.email || '');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!fullName.trim()) {
+      Alert.alert('Invalid Name', 'Please enter your name.');
+      return;
+    }
+
+    setSavingProfile(true);
+
+    const { error } = await updateProfile(fullName.trim());
+
+    setSavingProfile(false);
+
+    if (error) {
+      Alert.alert('Update Failed', error.message);
+      return;
+    }
+
+    Alert.alert('Success', 'Profile updated successfully.');
+    setProfileOpen(false);
+  };
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -34,7 +86,6 @@ export default function Settings() {
       ]}
       contentContainerStyle={styles.content}
     >
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.icon}>⚙️</Text>
@@ -82,12 +133,13 @@ export default function Settings() {
         {/* Profile */}
         <Pressable
           style={styles.option}
-          onPress={() =>
-            Alert.alert(
-              'Profile',
-              'Profile screen coming soon'
-            )
-          }
+          onPress={() => {
+            setProfileOpen(!profileOpen);
+
+            if (!profileOpen) {
+              loadProfile();
+            }
+          }}
         >
           <View>
             <Text
@@ -115,9 +167,113 @@ export default function Settings() {
               { color: colors.secondaryText },
             ]}
           >
-            ›
+            {profileOpen ? '⌃' : '›'}
           </Text>
         </Pressable>
+
+        {/* Profile Editor */}
+        {profileOpen && (
+          <View
+            style={[
+              styles.profileEditor,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {/* Full Name */}
+            <Text
+              style={[
+                styles.inputLabel,
+                { color: colors.text },
+              ]}
+            >
+              Full Name
+            </Text>
+
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Enter your full name"
+              placeholderTextColor={colors.secondaryText}
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                },
+              ]}
+            />
+
+            {/* Email */}
+            <Text
+              style={[
+                styles.inputLabel,
+                { color: colors.text },
+              ]}
+            >
+              Email
+            </Text>
+
+            <TextInput
+              value={email}
+              editable={false}
+              style={[
+                styles.input,
+                styles.disabledInput,
+                {
+                  color: colors.secondaryText,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                },
+              ]}
+            />
+
+            {/* Buttons */}
+            <View style={styles.profileActions}>
+              <Pressable
+                style={[
+                  styles.cancelButton,
+                  {
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setProfileOpen(false)}
+              >
+                <Text
+                  style={[
+                    styles.cancelText,
+                    { color: colors.text },
+                  ]}
+                >
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.saveButton,
+                  {
+                    backgroundColor: colors.button,
+                  },
+                ]}
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+              >
+                <Text
+                  style={[
+                    styles.saveText,
+                    { color: colors.buttonText },
+                  ]}
+                >
+                  {savingProfile ? 'Saving...' : 'Save Profile'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         <View
           style={[
@@ -194,7 +350,6 @@ export default function Settings() {
           </Text>
 
           <View style={styles.themeButtons}>
-
             {/* Light */}
             <Pressable
               style={[
@@ -244,7 +399,6 @@ export default function Settings() {
                 🌙 Dark
               </Text>
             </Pressable>
-
           </View>
         </View>
       </View>
@@ -296,7 +450,6 @@ export default function Settings() {
       >
         LifeKit • Account & Settings
       </Text>
-
     </ScrollView>
   );
 }
@@ -373,6 +526,69 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
 
+  /* Profile */
+
+  profileEditor: {
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 7,
+    marginTop: 8,
+  },
+
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 15,
+  },
+
+  disabledInput: {
+    opacity: 0.7,
+  },
+
+  profileActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+
+  cancelButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  saveButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  saveText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+
+  /* Theme */
+
   themeButtons: {
     flexDirection: 'row',
     gap: 10,
@@ -390,6 +606,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+  /* Logout */
 
   logoutButton: {
     paddingVertical: 15,

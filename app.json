@@ -24,10 +24,6 @@
     },
     "plugins": [
       "expo-router",
-<<<<<<< HEAD
-      "@react-native-community/datetimepicker"
-    ]
-=======
       "expo-notifications"
     ],
     "extra": {
@@ -36,6 +32,5 @@
         "projectId": "a4f74706-a1aa-48ee-ae20-8fb82a6b7025"
       }
     }
->>>>>>> main
   }
 }

@@ -9,12 +9,8 @@
     "@supabase/supabase-js": "^2.117.2",
     "date-fns": "^4.4.0",
     "expo": "~57.0.21",
-<<<<<<< HEAD
-    "expo-constants": "~57.0.19",
-=======
     "expo-constants": "~57.0.17",
     "expo-dev-client": "~57.0.19",
->>>>>>> main
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.3",
     "expo-glass-effect": "~57.0.2",

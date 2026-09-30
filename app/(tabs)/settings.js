@@ -5,65 +5,116 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
-  TextInput,
+  Switch,
 } from 'react-native';
 
-import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 
-import {
-  signOut,
-  getCurrentUser,
-  updateProfile,
-} from '../../src/features/account/api';
-
+import { signOut } from '../../src/features/account/api';
 import { useTheme } from '../../src/context/ThemeContext';
 
 export default function Settings() {
   const { theme, colors, setTheme } = useTheme();
 
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [taskNotifications, setTaskNotifications] = useState(true);
+  const [reminderNotifications, setReminderNotifications] = useState(true);
+  const [moneyNotifications, setMoneyNotifications] = useState(true);
 
   useEffect(() => {
-    loadProfile();
+    loadNotificationPreferences();
   }, []);
 
-  const loadProfile = async () => {
-    const { user, error } = await getCurrentUser();
+  const loadNotificationPreferences = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(
+        'notificationPreferences'
+      );
 
-    if (error) {
-      Alert.alert('Error', error.message);
-      return;
-    }
+      if (saved) {
+        const preferences = JSON.parse(saved);
 
-    if (user) {
-      setFullName(user.user_metadata?.full_name || '');
-      setEmail(user.email || '');
+        setNotificationsEnabled(
+          preferences.notificationsEnabled ?? true
+        );
+
+        setTaskNotifications(
+          preferences.taskNotifications ?? true
+        );
+
+        setReminderNotifications(
+          preferences.reminderNotifications ?? true
+        );
+
+        setMoneyNotifications(
+          preferences.moneyNotifications ?? true
+        );
+      }
+    } catch (error) {
+      console.log('Failed to load notification preferences:', error);
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!fullName.trim()) {
-      Alert.alert('Invalid Name', 'Please enter your name.');
-      return;
+  const saveNotificationPreferences = async (
+    updatedPreferences
+  ) => {
+    try {
+      await AsyncStorage.setItem(
+        'notificationPreferences',
+        JSON.stringify(updatedPreferences)
+      );
+    } catch (error) {
+      console.log(
+        'Failed to save notification preferences:',
+        error
+      );
     }
+  };
 
-    setSavingProfile(true);
+  const handleNotificationsToggle = async (value) => {
+    setNotificationsEnabled(value);
 
-    const { error } = await updateProfile(fullName.trim());
+    await saveNotificationPreferences({
+      notificationsEnabled: value,
+      taskNotifications,
+      reminderNotifications,
+      moneyNotifications,
+    });
+  };
 
-    setSavingProfile(false);
+  const handleTaskToggle = async (value) => {
+    setTaskNotifications(value);
 
-    if (error) {
-      Alert.alert('Update Failed', error.message);
-      return;
-    }
+    await saveNotificationPreferences({
+      notificationsEnabled,
+      taskNotifications: value,
+      reminderNotifications,
+      moneyNotifications,
+    });
+  };
 
-    Alert.alert('Success', 'Profile updated successfully.');
-    setProfileOpen(false);
+  const handleReminderToggle = async (value) => {
+    setReminderNotifications(value);
+
+    await saveNotificationPreferences({
+      notificationsEnabled,
+      taskNotifications,
+      reminderNotifications: value,
+      moneyNotifications,
+    });
+  };
+
+  const handleMoneyToggle = async (value) => {
+    setMoneyNotifications(value);
+
+    await saveNotificationPreferences({
+      notificationsEnabled,
+      taskNotifications,
+      reminderNotifications,
+      moneyNotifications: value,
+    });
   };
 
   const handleSignOut = async () => {
@@ -82,7 +133,9 @@ export default function Settings() {
     <ScrollView
       style={[
         styles.container,
-        { backgroundColor: colors.background },
+        {
+          backgroundColor: colors.background,
+        },
       ]}
       contentContainerStyle={styles.content}
     >
@@ -94,7 +147,9 @@ export default function Settings() {
           <Text
             style={[
               styles.title,
-              { color: colors.text },
+              {
+                color: colors.text,
+              },
             ]}
           >
             Settings
@@ -103,7 +158,9 @@ export default function Settings() {
           <Text
             style={[
               styles.subtitle,
-              { color: colors.secondaryText },
+              {
+                color: colors.secondaryText,
+              },
             ]}
           >
             Manage your LifeKit account
@@ -124,7 +181,9 @@ export default function Settings() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: colors.text },
+            {
+              color: colors.text,
+            },
           ]}
         >
           Account
@@ -133,19 +192,15 @@ export default function Settings() {
         {/* Profile */}
         <Pressable
           style={styles.option}
-          onPress={() => {
-            setProfileOpen(!profileOpen);
-
-            if (!profileOpen) {
-              loadProfile();
-            }
-          }}
+          onPress={() => router.push('/profile')}
         >
           <View>
             <Text
               style={[
                 styles.optionTitle,
-                { color: colors.text },
+                {
+                  color: colors.text,
+                },
               ]}
             >
               Profile
@@ -154,7 +209,9 @@ export default function Settings() {
             <Text
               style={[
                 styles.optionText,
-                { color: colors.secondaryText },
+                {
+                  color: colors.secondaryText,
+                },
               ]}
             >
               Manage your account information
@@ -164,158 +221,9 @@ export default function Settings() {
           <Text
             style={[
               styles.arrow,
-              { color: colors.secondaryText },
-            ]}
-          >
-            {profileOpen ? '⌃' : '›'}
-          </Text>
-        </Pressable>
-
-        {/* Profile Editor */}
-        {profileOpen && (
-          <View
-            style={[
-              styles.profileEditor,
               {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
+                color: colors.secondaryText,
               },
-            ]}
-          >
-            {/* Full Name */}
-            <Text
-              style={[
-                styles.inputLabel,
-                { color: colors.text },
-              ]}
-            >
-              Full Name
-            </Text>
-
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Enter your full name"
-              placeholderTextColor={colors.secondaryText}
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                },
-              ]}
-            />
-
-            {/* Email */}
-            <Text
-              style={[
-                styles.inputLabel,
-                { color: colors.text },
-              ]}
-            >
-              Email
-            </Text>
-
-            <TextInput
-              value={email}
-              editable={false}
-              style={[
-                styles.input,
-                styles.disabledInput,
-                {
-                  color: colors.secondaryText,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                },
-              ]}
-            />
-
-            {/* Buttons */}
-            <View style={styles.profileActions}>
-              <Pressable
-                style={[
-                  styles.cancelButton,
-                  {
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => setProfileOpen(false)}
-              >
-                <Text
-                  style={[
-                    styles.cancelText,
-                    { color: colors.text },
-                  ]}
-                >
-                  Cancel
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.saveButton,
-                  {
-                    backgroundColor: colors.button,
-                  },
-                ]}
-                onPress={handleSaveProfile}
-                disabled={savingProfile}
-              >
-                <Text
-                  style={[
-                    styles.saveText,
-                    { color: colors.buttonText },
-                  ]}
-                >
-                  {savingProfile ? 'Saving...' : 'Save Profile'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.divider,
-            { backgroundColor: colors.border },
-          ]}
-        />
-
-        {/* Notifications */}
-        <Pressable
-          style={styles.option}
-          onPress={() =>
-            Alert.alert(
-              'Notifications',
-              'Notification preferences coming soon'
-            )
-          }
-        >
-          <View>
-            <Text
-              style={[
-                styles.optionTitle,
-                { color: colors.text },
-              ]}
-            >
-              Notifications
-            </Text>
-
-            <Text
-              style={[
-                styles.optionText,
-                { color: colors.secondaryText },
-              ]}
-            >
-              Manage notification preferences
-            </Text>
-          </View>
-
-          <Text
-            style={[
-              styles.arrow,
-              { color: colors.secondaryText },
             ]}
           >
             ›
@@ -325,7 +233,161 @@ export default function Settings() {
         <View
           style={[
             styles.divider,
-            { backgroundColor: colors.border },
+            {
+              backgroundColor: colors.border,
+            },
+          ]}
+        />
+
+        {/* Notifications */}
+        <View>
+          <View style={styles.option}>
+            <View style={styles.optionInfo}>
+              <Text
+                style={[
+                  styles.optionTitle,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                Notifications
+              </Text>
+
+              <Text
+                style={[
+                  styles.optionText,
+                  {
+                    color: colors.secondaryText,
+                  },
+                ]}
+              >
+                Manage your notification preferences
+              </Text>
+            </View>
+
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationsToggle}
+            />
+          </View>
+
+          {/* Notification Types */}
+          {notificationsEnabled && (
+            <View
+              style={[
+                styles.notificationBox,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              {/* Tasks */}
+              <View style={styles.notificationRow}>
+                <View style={styles.notificationInfo}>
+                  <Text
+                    style={[
+                      styles.notificationTitle,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    Task Notifications
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.notificationText,
+                      {
+                        color: colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    Get notified about your tasks
+                  </Text>
+                </View>
+
+                <Switch
+                  value={taskNotifications}
+                  onValueChange={handleTaskToggle}
+                />
+              </View>
+
+              {/* Reminders */}
+              <View style={styles.notificationRow}>
+                <View style={styles.notificationInfo}>
+                  <Text
+                    style={[
+                      styles.notificationTitle,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    Reminder Notifications
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.notificationText,
+                      {
+                        color: colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    Get notified about upcoming reminders
+                  </Text>
+                </View>
+
+                <Switch
+                  value={reminderNotifications}
+                  onValueChange={handleReminderToggle}
+                />
+              </View>
+
+              {/* Money */}
+              <View style={styles.notificationRow}>
+                <View style={styles.notificationInfo}>
+                  <Text
+                    style={[
+                      styles.notificationTitle,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    Money Notifications
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.notificationText,
+                      {
+                        color: colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    Get notified about money updates
+                  </Text>
+                </View>
+
+                <Switch
+                  value={moneyNotifications}
+                  onValueChange={handleMoneyToggle}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.divider,
+            {
+              backgroundColor: colors.border,
+            },
           ]}
         />
 
@@ -334,7 +396,9 @@ export default function Settings() {
           <Text
             style={[
               styles.optionTitle,
-              { color: colors.text },
+              {
+                color: colors.text,
+              },
             ]}
           >
             Theme
@@ -343,7 +407,9 @@ export default function Settings() {
           <Text
             style={[
               styles.optionText,
-              { color: colors.secondaryText },
+              {
+                color: colors.secondaryText,
+              },
             ]}
           >
             Choose your app theme
@@ -368,7 +434,9 @@ export default function Settings() {
               <Text
                 style={[
                   styles.themeButtonText,
-                  { color: colors.text },
+                  {
+                    color: colors.text,
+                  },
                 ]}
               >
                 ☀️ Light
@@ -393,7 +461,9 @@ export default function Settings() {
               <Text
                 style={[
                   styles.themeButtonText,
-                  { color: colors.text },
+                  {
+                    color: colors.text,
+                  },
                 ]}
               >
                 🌙 Dark
@@ -416,7 +486,9 @@ export default function Settings() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: colors.text },
+            {
+              color: colors.text,
+            },
           ]}
         >
           Account Actions
@@ -434,7 +506,9 @@ export default function Settings() {
           <Text
             style={[
               styles.logoutText,
-              { color: colors.buttonText },
+              {
+                color: colors.buttonText,
+              },
             ]}
           >
             Sign Out
@@ -445,7 +519,9 @@ export default function Settings() {
       <Text
         style={[
           styles.version,
-          { color: colors.secondaryText },
+          {
+            color: colors.secondaryText,
+          },
         ]}
       >
         LifeKit • Account & Settings
@@ -507,6 +583,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 
+  optionInfo: {
+    flex: 1,
+    marginRight: 15,
+  },
+
   optionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -526,68 +607,34 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
 
-  /* Profile */
-
-  profileEditor: {
-    marginTop: 15,
-    padding: 15,
+  notificationBox: {
+    borderWidth: 1,
     borderRadius: 14,
-    borderWidth: 1,
+    padding: 12,
+    marginTop: 10,
   },
 
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 7,
-    marginTop: 8,
-  },
-
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    fontSize: 15,
-  },
-
-  disabledInput: {
-    opacity: 0.7,
-  },
-
-  profileActions: {
+  notificationRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
-  },
-
-  cancelButton: {
-    flex: 1,
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
 
-  cancelText: {
-    fontSize: 15,
+  notificationInfo: {
+    flex: 1,
+    marginRight: 15,
+  },
+
+  notificationTitle: {
+    fontSize: 14,
     fontWeight: '600',
   },
 
-  saveButton: {
-    flex: 1,
-    height: 46,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  notificationText: {
+    fontSize: 11,
+    marginTop: 3,
   },
-
-  saveText: {
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-
-  /* Theme */
 
   themeButtons: {
     flexDirection: 'row',
@@ -606,8 +653,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  /* Logout */
 
   logoutButton: {
     paddingVertical: 15,

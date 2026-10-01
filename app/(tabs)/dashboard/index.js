@@ -1,47 +1,20 @@
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-
-import {
-  router,
-  useFocusEffect,
-} from 'expo-router';
-
-import {
-  useCallback,
-  useState,
-} from 'react';
+import { SafeAreaView, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useAuth } from '../../../src/context/AuthContext';
+import { getSummary as getTasksSummary, getTasks } from '../../../src/features/tasks/api';
+import { getSummary as getMoneySummary } from '../../../src/features/money/api';
+import { getSummary as getNotesSummary } from '../../../src/features/notes/api';
 
-import {
-  getSummary as getAccountSummary,
-} from '../../../src/features/account/api';
+const summaryFunctions = [getTasksSummary, getMoneySummary, getNotesSummary];
 
-import {
-  getSummary as getTasksSummary,
-  getTasks,
-} from '../../../src/features/tasks/api';
-
-import {
-  getSummary as getMoneySummary,
-} from '../../../src/features/money/api';
-
-import {
-  getSummary as getNotesSummary,
-} from '../../../src/features/notes/api';
-
-const summaryFunctions = [
-  getAccountSummary,
-  getTasksSummary,
-  getMoneySummary,
-  getNotesSummary,
+const quickActions = [
+  { label: 'Add Task', href: '/(tabs)/tasks/new' },
+  { label: 'Add Expense', href: '/(tabs)/money/new' },
+  { label: 'Add Note', href: '/(tabs)/notes/new' },
+  { label: 'Reminder', href: '/(tabs)/tasks/reminders' },
 ];
 
 export default function Dashboard() {
@@ -50,82 +23,48 @@ export default function Dashboard() {
 
   const [summaries, setSummaries] = useState([]);
   const [todayTasks, setTodayTasks] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadDashboard = useCallback(async () => {
     if (!session?.user?.id) {
+      setSummaries([]);
+      setTodayTasks([]);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
     setError('');
 
     try {
       const userId = session.user.id;
 
       const results = await Promise.allSettled(
-        summaryFunctions.map((getSummary) =>
-          getSummary(userId)
-        )
+        summaryFunctions.map((getSummary) => getSummary(userId))
       );
+      setSummaries(results.filter((r) => r.status === 'fulfilled').map((r) => r.value));
 
-      const successfulSummaries = results
-        .filter(
-          (result) =>
-            result.status === 'fulfilled'
-        )
-        .map((result) => result.value);
+      const tasksResult = await getTasks(userId);
+      if (tasksResult.error) throw new Error(tasksResult.error.message);
 
-      setSummaries(successfulSummaries);
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
 
-      const taskResult = await getTasks(
-        userId
+      setTodayTasks(
+        (tasksResult.data || []).filter((task) => {
+          if (!task.due_at) return false;
+          const date = new Date(task.due_at);
+          return date >= start && date <= end;
+        })
       );
-
-      if (taskResult.error) {
-        throw new Error(
-          taskResult.error.message
-        );
-      }
-
-      const today = new Date();
-
-      const startOfToday = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
-
-      const endOfToday = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate() + 1
-      );
-
-      const filteredTasks = (
-        taskResult.data || []
-      ).filter((task) => {
-        if (!task.due_at) {
-          return false;
-        }
-
-        const due = new Date(task.due_at);
-
-        return (
-          due >= startOfToday &&
-          due < endOfToday
-        );
-      });
-
-      setTodayTasks(filteredTasks);
-    } catch (loadError) {
-      setError(loadError.message);
+    } catch (err) {
+      setError(err.message || 'Unable to load dashboard.');
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,516 +72,175 @@ export default function Dashboard() {
     }, [loadDashboard])
   );
 
-  const quickActions = [
-    {
-      title: 'Add Task',
-      path: '/(tabs)/tasks/new',
-    },
-    {
-      title: 'Add Expense',
-      path: '/(tabs)/money/new',
-    },
-    {
-      title: 'Add Note',
-      path: '/(tabs)/notes/new',
-    },
-    {
-      title: 'Reminder',
-      path: '/(tabs)/tasks/reminders',
-    },
-  ];
+  const card = { backgroundColor: colors.card, borderColor: colors.border };
+
+  // Full-screen loader only on the first load (no flicker on refocus)
+  if (loading && summaries.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.center}>
+          <Text style={{ color: colors.text }}>Loading dashboard...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        {
-          backgroundColor:
-            colors.background,
-        },
-      ]}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-      >
-        <View style={styles.header}>
-          <View>
-            <Text
-              style={[
-                styles.title,
-                { color: colors.text },
-              ]}
-            >
-              Dashboard
-            </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>Dashboard</Text>
+        <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
+          Your LifeKit overview
+        </Text>
 
-            <Text
-              style={[
-                styles.subtitle,
-                {
-                  color:
-                    colors.secondaryText,
-                },
-              ]}
-            >
-              Your day at a glance
-            </Text>
-          </View>
-
-          <Pressable
-            style={[
-              styles.settingsButton,
-              {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
-              },
-            ]}
-            onPress={() =>
-              router.push(
-                '/(tabs)/settings'
-              )
-            }
-          >
-            <Text style={styles.settingsIcon}>
-              ⚙️
-            </Text>
-          </Pressable>
-        </View>
-
-        {loading ? (
-          <Text
-            style={[
-              styles.message,
-              {
-                color: colors
-                  .secondaryText,
-              },
-            ]}
-          >
-            Loading dashboard...
-          </Text>
-        ) : null}
-
-        {!loading && error ? (
-          <View
-            style={[
-              styles.errorCard,
-              {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.errorText,
-                { color: colors.text },
-              ]}
-            >
-              {error}
-            </Text>
-
+        {error ? (
+          <View style={[styles.errorBox, card]}>
+            <Text style={{ color: colors.text }}>{error}</Text>
             <Pressable
-              style={[
-                styles.retryButton,
-                {
-                  backgroundColor:
-                    colors.button,
-                },
-              ]}
               onPress={loadDashboard}
+              style={[styles.retryButton, { backgroundColor: colors.primary }]}
             >
-              <Text
-                style={[
-                  styles.retryText,
-                  {
-                    color:
-                      colors.buttonText,
-                  },
-                ]}
-              >
-                Retry
-              </Text>
+              <Text style={styles.retryText}>Retry</Text>
             </Pressable>
           </View>
         ) : null}
 
-        {!loading &&
-        !error ? (
-          <>
-            <View style={styles.summaryGrid}>
-              {summaries.map((summary) => (
-                <Pressable
-                  key={summary.title}
-                  style={[
-                    styles.summaryCard,
-                    {
-                      backgroundColor:
-                        colors.card,
-                      borderColor:
-                        colors.border,
-                    },
-                  ]}
-                  onPress={() =>
-                    router.push(
-                      summary.href
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.cardTitle,
-                      {
-                        color:
-                          colors
-                            .secondaryText,
-                      },
-                    ]}
-                  >
-                    {summary.title}
-                  </Text>
+        {/* Summary Cards */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Overview</Text>
 
-                  <Text
-                    style={[
-                      styles.cardValue,
-                      {
-                        color:
-                          colors.text,
-                      },
-                    ]}
-                  >
-                    {summary.value}
-                  </Text>
+        <View style={styles.summaryGrid}>
+          {summaries.map((summary) => (
+            <Pressable
+              key={summary.title}
+              onPress={() => router.push(summary.href)}
+              style={[styles.summaryCard, card]}
+            >
+              <Text style={[styles.summaryTitle, { color: colors.secondaryText }]}>
+                {summary.title}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {summary.value}
+              </Text>
+              <Text style={[styles.summaryCaption, { color: colors.secondaryText }]}>
+                {summary.caption}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
-                  <Text
-                    style={[
-                      styles.cardCaption,
-                      {
-                        color:
-                          colors
-                            .secondaryText,
-                      },
-                    ]}
-                  >
-                    {summary.caption}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+        {/* Quick Actions */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
 
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: colors.text },
+        <View style={styles.actions}>
+          {quickActions.map((action) => (
+            <Pressable
+              key={action.label}
+              onPress={() => router.push(action.href)}
+              style={({ pressed }) => [
+                styles.actionCard,
+                card,
+                { opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              Quick Actions
-            </Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>{action.label}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-            <View style={styles.quickActions}>
-              {quickActions.map((action) => (
-                <Pressable
-                  key={action.title}
-                  style={[
-                    styles.actionButton,
-                    {
-                      backgroundColor:
-                        colors.card,
-                      borderColor:
-                        colors.border,
-                    },
-                  ]}
-                  onPress={() =>
-                    router.push(
-                      action.path
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.actionText,
-                      {
-                        color:
-                          colors.text,
-                      },
-                    ]}
-                  >
-                    {action.title}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+        {/* Today's Tasks */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Tasks</Text>
+          <Pressable onPress={() => router.push('/(tabs)/tasks')}>
+            <Text style={{ color: colors.primary }}>View All</Text>
+          </Pressable>
+        </View>
 
-            <View style={styles.taskHeader}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.text },
-                ]}
-              >
-                Today's Tasks
-              </Text>
-
-              <Pressable
-                onPress={() =>
-                  router.push(
-                    '/(tabs)/tasks'
-                  )
-                }
-              >
+        {todayTasks.length > 0 ? (
+          todayTasks.map((task) => (
+            <View key={task.id} style={[styles.taskCard, card]}>
+              <View style={styles.taskContent}>
                 <Text
                   style={[
-                    styles.viewAll,
+                    styles.taskTitle,
                     {
-                      color:
-                        colors.text,
+                      color: colors.text,
+                      textDecorationLine: task.is_done ? 'line-through' : 'none',
                     },
                   ]}
                 >
-                  View all
+                  {task.title}
                 </Text>
-              </Pressable>
-            </View>
-
-            {todayTasks.length === 0 ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  {
-                    backgroundColor:
-                      colors.card,
-                    borderColor:
-                      colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.emptyText,
-                    {
-                      color:
-                        colors
-                          .secondaryText,
-                    },
-                  ]}
-                >
-                  No tasks due today.
+                <Text style={[styles.taskTime, { color: colors.secondaryText }]}>
+                  {new Date(task.due_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </Text>
               </View>
-            ) : (
-              todayTasks.map((task) => (
-                <Pressable
-                  key={task.id}
-                  style={[
-                    styles.taskCard,
-                    {
-                      backgroundColor:
-                        colors.card,
-                      borderColor:
-                        colors.border,
-                    },
-                  ]}
-                  onPress={() =>
-                    router.push(
-                      `/(tabs)/tasks/${task.id}`
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.taskTitle,
-                      {
-                        color:
-                          colors.text,
-                      },
-                    ]}
-                  >
-                    {task.is_done
-                      ? '✓ '
-                      : ''}
-                    {task.title}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.taskMeta,
-                      {
-                        color:
-                          colors
-                            .secondaryText,
-                      },
-                    ]}
-                  >
-                    {task.category} •{' '}
-                    {task.priority}
-                  </Text>
-                </Pressable>
-              ))
-            )}
-          </>
-        ) : null}
+              <Text style={{ color: task.is_done ? colors.primary : colors.secondaryText }}>
+                {task.is_done ? 'Done' : 'Pending'}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <View style={[styles.emptyBox, card]}>
+            <Text style={{ color: colors.secondaryText }}>No tasks due today.</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  container: {
-    padding: 18,
-    paddingBottom: 110,
-  },
+  title: { fontSize: 30, fontWeight: '700' },
+  subtitle: { marginTop: 6, marginBottom: 24, fontSize: 15 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', marginTop: 10, marginBottom: 12 },
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 25,
-  },
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  summaryCard: { width: '48%', borderWidth: 1, borderRadius: 14, padding: 16, marginBottom: 12 },
+  summaryTitle: { fontSize: 14 },
+  summaryValue: { fontSize: 24, fontWeight: '700', marginTop: 6 },
+  summaryCaption: { fontSize: 13, marginTop: 4 },
 
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-  },
-
-  subtitle: {
-    fontSize: 14,
-    marginTop: 5,
-  },
-
-  settingsButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
+  actionCard: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    minHeight: 56,
     borderWidth: 1,
+    borderRadius: 14,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
   },
+  actionText: { fontSize: 15, fontWeight: '600' },
 
-  settingsIcon: {
-    fontSize: 22,
-  },
-
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-
-  summaryCard: {
-    width: '48%',
-    minHeight: 130,
-    padding: 16,
-    borderRadius: 16,
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  taskCard: {
     borderWidth: 1,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  taskContent: { flex: 1, marginRight: 10 },
+  taskTitle: { fontSize: 16, fontWeight: '600' },
+  taskTime: { marginTop: 5, fontSize: 13 },
 
-  cardTitle: {
-    fontSize: 13,
-  },
-
-  cardValue: {
-    fontSize: 23,
-    fontWeight: 'bold',
+  emptyBox: { borderWidth: 1, borderRadius: 12, padding: 18, alignItems: 'center' },
+  errorBox: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 18 },
+  retryButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
     marginTop: 10,
   },
-
-  cardCaption: {
-    fontSize: 12,
-    marginTop: 6,
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 25,
-    marginBottom: 12,
-  },
-
-  quickActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-
-  actionButton: {
-    width: '48%',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-
-  actionText: {
-    fontWeight: '600',
-  },
-
-  taskHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  viewAll: {
-    fontWeight: '600',
-  },
-
-  taskCard: {
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  taskMeta: {
-    fontSize: 12,
-    marginTop: 6,
-  },
-
-  emptyCard: {
-    padding: 20,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-
-  emptyText: {
-    textAlign: 'center',
-  },
-
-  message: {
-    textAlign: 'center',
-    marginTop: 20,
-  },
-
-  errorCard: {
-    padding: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-
-  errorText: {
-    marginBottom: 12,
-  },
-
-  retryButton: {
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-
-  retryText: {
-    fontWeight: 'bold',
-  },
+  retryText: { color: '#fff', fontWeight: '600' },
 });

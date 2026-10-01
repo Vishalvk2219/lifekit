@@ -133,29 +133,23 @@ export async function deleteNote(noteId) {
 export async function getSummary(userId) {
   const { data, error } = await supabase
     .from('notes')
-    .select('is_pinned')
+    .select('id, is_pinned')
     .eq('user_id', userId);
 
   if (error) {
-    return {
-      data: null,
-      error,
-    };
+    throw new Error(error.message);
   }
 
-  const total = data?.length ?? 0;
+  const notes = data || [];
 
-  const pinned = (data || []).filter(
+  const pinned = notes.filter(
     (note) => note.is_pinned
   ).length;
 
   return {
-    data: {
-      title: 'Notes',
-      value: String(total),
-      caption: `${pinned} pinned`,
-      href: '/(tabs)/notes',
-    },
-    error: null,
+    title: 'Notes',
+    value: String(notes.length),
+    caption: `${pinned} pinned`,
+    href: '/(tabs)/notes',
   };
 }

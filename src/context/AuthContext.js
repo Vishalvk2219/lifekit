@@ -16,16 +16,16 @@ const initialState = {
 
 function authReducer(state, action) {
   switch (action.type) {
-    case 'SET_SESSION':
+    case 'SESSION_LOADING':
       return {
         ...state,
-        session: action.payload,
+        loading: true,
       };
 
-    case 'SET_LOADING':
+    case 'SESSION_READY':
       return {
-        ...state,
-        loading: action.payload,
+        session: action.payload,
+        loading: false,
       };
 
     default:
@@ -48,23 +48,15 @@ export function AuthProvider({ children }) {
         error,
       } = await supabase.auth.getSession();
 
-      if (!mounted) return;
-
-      if (error) {
-        dispatch({
-          type: 'SET_SESSION',
-          payload: null,
-        });
-      } else {
-        dispatch({
-          type: 'SET_SESSION',
-          payload: data.session,
-        });
+      if (!mounted) {
+        return;
       }
 
       dispatch({
-        type: 'SET_LOADING',
-        payload: false,
+        type: 'SESSION_READY',
+        payload: error
+          ? null
+          : data.session,
       });
     }
 
@@ -73,10 +65,10 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (_event, session) => {
         dispatch({
-          type: 'SET_SESSION',
-          payload: newSession,
+          type: 'SESSION_READY',
+          payload: session,
         });
       }
     );

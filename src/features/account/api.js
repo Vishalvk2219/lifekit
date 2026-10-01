@@ -23,20 +23,9 @@ export async function signOut() {
   return await supabase.auth.signOut();
 }
 
-export async function sendResetOtp(email) {
-  return await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: false,
-    },
-  });
-}
-
-export async function verifyResetOtp(email, token) {
-  return await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'recovery',
+export async function forgotPassword(email) {
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'lifekit://forgot-password',
   });
 }
 
@@ -46,38 +35,132 @@ export async function updatePassword(password) {
   });
 }
 
-export async function getProfile() {
+// ---------------- EXPORT MY DATA ----------------
+
+export async function exportMyData() {
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) {
-    return { data: null, error: userError };
+  if (userError || !user) {
+    return {
+      data: null,
+      error: userError || new Error('No signed-in user'),
+    };
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  const [
+    profileResult,
+    tasksResult,
+    remindersResult,
+    expensesResult,
+    notesResult,
+    shoppingListsResult,
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle(),
 
-  return { data, error };
-}
+    supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', user.id),
 
-export async function getCurrentUser() {
-  const { data, error } = await supabase.auth.getUser();
+    supabase
+      .from('reminders')
+      .select('*')
+      .eq('user_id', user.id),
+
+    supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', user.id),
+
+    supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', user.id),
+
+    supabase
+      .from('shopping_lists')
+      .select('*')
+      .eq('user_id', user.id),
+  ]);
+
+  const results = [
+    profileResult,
+    tasksResult,
+    remindersResult,
+    expensesResult,
+    notesResult,
+    shoppingListsResult,
+  ];
+
+  const failedResult = results.find(
+    (result) => result.error
+  );
+
+  if (failedResult) {
+    return {
+      data: null,
+      error: failedResult.error,
+    };
+  }
+
+  const shoppingLists = shoppingListsResult.data || [];
+
+  const listIds = shoppingLists.map(
+    (list) => list.id
+  );
+
+  let shoppingItems = [];
+
+  if (listIds.length > 0) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from('shopping_items')
+      .select('*')
+      .in('list_id', listIds);
+
+    if (error) {
+      return {
+        data: null,
+        error,
+      };
+    }
+
+    shoppingItems = data || [];
+  }
 
   return {
-    user: data?.user ?? null,
-    error,
+    data: {
+      exported_at: new Date().toISOString(),
+
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+
+      profiles: profileResult.data,
+      tasks: tasksResult.data || [],
+      reminders: remindersResult.data || [],
+      expenses: expensesResult.data || [],
+      notes: notesResult.data || [],
+      shopping_lists: shoppingLists,
+      shopping_items: shoppingItems,
+    },
+
+    error: null,
   };
 }
 
-export async function updateProfile(fullName) {
-  return await supabase.auth.updateUser({
-    data: {
-      full_name: fullName,
-    },
-  });
+// ---------------- DELETE MY ACCOUNT ----------------
+
+export async function deleteMyAccount() {
+  return await supabase.rpc('delete_my_account');
 }

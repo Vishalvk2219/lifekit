@@ -45,3 +45,24 @@ export async function updatePassword(password) {
     password,
   });
 }
+
+export async function getSummary(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const name = data?.full_name?.trim();
+
+  return {
+    title: 'Account',
+    value: name || 'Profile',
+    caption: 'account settings',
+    href: '/(tabs)/settings',
+  };
+}

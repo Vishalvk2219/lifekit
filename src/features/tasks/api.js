@@ -85,28 +85,44 @@ export async function toggleTask(taskId, userId, isDone) {
 }
 
 export async function getSummary(userId) {
+  const today = new Date();
+
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const endOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1
+  );
+
   const { data, error } = await supabase
     .from('tasks')
-    .select('is_done')
-    .eq('user_id', userId);
+    .select('id, title, due_at, is_done')
+    .eq('user_id', userId)
+    .gte('due_at', startOfToday.toISOString())
+    .lt('due_at', endOfToday.toISOString())
+    .order('due_at', { ascending: true });
 
   if (error) {
-    return {
-      data: null,
-      error,
-    };
+    throw new Error(error.message);
   }
 
-  const total = data.length;
-  const completed = data.filter((task) => task.is_done).length;
+  const tasks = data || [];
+
+  const completed = tasks.filter(
+    (task) => task.is_done
+  ).length;
+
+  const remaining = tasks.length - completed;
 
   return {
-    data: {
-      title: 'Tasks',
-      value: String(total),
-      caption: `${completed} completed`,
-      href: '/(tabs)/tasks',
-    },
-    error: null,
+    title: 'Tasks',
+    value: `${remaining} due`,
+    caption: `${completed} completed today`,
+    href: '/(tabs)/tasks',
   };
 }

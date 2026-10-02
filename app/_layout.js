@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../src/lib/supabase';
 import { ThemeProvider } from '../src/context/ThemeContext';
+import { AuthProvider } from "../src/context/AuthContext";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -46,12 +47,10 @@ export default function RootLayout() {
   }, [session, loading, segments]);
 
   return (
-    <ThemeProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

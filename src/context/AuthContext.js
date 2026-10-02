@@ -1,77 +1,41 @@
-import {
+import React, {
   createContext,
   useContext,
+  useState,
   useEffect,
-  useReducer,
-} from 'react';
-
-import { supabase } from '../lib/supabase';
+} from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
-const initialState = {
-  session: null,
-  loading: true,
-};
-
-function authReducer(state, action) {
-  switch (action.type) {
-    case 'SESSION_LOADING':
-      return {
-        ...state,
-        loading: true,
-      };
-
-    case 'SESSION_READY':
-      return {
-        session: action.payload,
-        loading: false,
-      };
-
-    default:
-      return state;
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(
-    authReducer,
-    initialState
-  );
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
     async function loadSession() {
-      const {
-        data,
-        error,
-      } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
 
-      if (!mounted) {
-        return;
+      if (mounted) {
+        if (error) {
+          console.error("Error loading session:", error.message);
+        }
+
+        setSession(data?.session ?? null);
+        setLoading(false);
       }
-
-      dispatch({
-        type: 'SESSION_READY',
-        payload: error
-          ? null
-          : data.session,
-      });
     }
 
     loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        dispatch({
-          type: 'SESSION_READY',
-          payload: session,
-        });
-      }
-    );
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session ?? null);
+      setLoading(false);
+    });
 
     return () => {
       mounted = false;
@@ -80,12 +44,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        session: state.session,
-        loading: state.loading,
-      }}
-    >
+    <AuthContext.Provider value={{ session, loading }}>
       {children}
     </AuthContext.Provider>
   );

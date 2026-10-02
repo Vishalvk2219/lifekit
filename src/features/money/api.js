@@ -175,6 +175,10 @@ export async function updateExpense(
  * Delete an expense.
  */
 export async function deleteExpense(id) {
+  if (!id) {
+    throw new Error('Expense ID is missing.');
+  }
+
   const {
     data: { user },
     error: userError,
@@ -185,38 +189,63 @@ export async function deleteExpense(id) {
   }
 
   if (!user) {
-    throw new Error('You must be signed in to delete an expense.');
+    throw new Error('Please sign in before deleting an expense.');
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('expenses')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id');
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(`Delete failed: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      'No expense was deleted. Check that the expense exists and your Supabase DELETE policy allows this action.'
+    );
   }
 
   return true;
 }
 
 /**
- * Get this month's spending total.
+ * Return the start of this month and the start of next month.
+ * The upper bound is exclusive so future months are not accidentally included.
+ */
+function getCurrentMonthRange() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const monthIndex = now.getMonth();
+
+  const start = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+  const nextMonthDate = new Date(year, monthIndex + 1, 1);
+  const end = `${nextMonthDate.getFullYear()}-${String(
+    nextMonthDate.getMonth() + 1
+  ).padStart(2, '0')}-01`;
+
+  return { start, end };
+}
+
+/**
+ * Get this month's spending total for a specific user.
  */
 export async function getMonthlyTotal(userId) {
-  const now = new Date();
+  if (!userId) {
+    throw new Error('A signed-in user is required to load the monthly total.');
+  }
 
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-
-  const startDate = `${year}-${month}-01`;
+  const { start, end } = getCurrentMonthRange();
 
   const { data, error } = await supabase
     .from('expenses')
     .select('amount')
     .eq('user_id', userId)
-    .gte('spent_on', startDate);
+    .gte('spent_on', start)
+    .lt('spent_on', end);
 
   if (error) {
     throw new Error(error.message);
@@ -229,21 +258,21 @@ export async function getMonthlyTotal(userId) {
 }
 
 /**
- * Get spending breakdown by category.
+ * Get this month's spending breakdown by category for a specific user.
  */
 export async function getCategoryBreakdown(userId) {
-  const now = new Date();
+  if (!userId) {
+    throw new Error('A signed-in user is required to load the spending breakdown.');
+  }
 
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-
-  const startDate = `${year}-${month}-01`;
+  const { start, end } = getCurrentMonthRange();
 
   const { data, error } = await supabase
     .from('expenses')
     .select('category, amount')
     .eq('user_id', userId)
-    .gte('spent_on', startDate);
+    .gte('spent_on', start)
+    .lt('spent_on', end);
 
   if (error) {
     throw new Error(error.message);
@@ -253,17 +282,13 @@ export async function getCategoryBreakdown(userId) {
 
   (data || []).forEach((expense) => {
     const category = expense.category || 'other';
-
-    totals[category] =
-      (totals[category] || 0) + Number(expense.amount);
+    totals[category] = (totals[category] || 0) + Number(expense.amount);
   });
 
-  return Object.entries(totals).map(
-    ([category, amount]) => ({
-      category,
-      amount,
-    })
-  );
+  return Object.entries(totals).map(([category, amount]) => ({
+    category,
+    amount,
+  }));
 }
 
 /**
@@ -278,4 +303,4 @@ export async function getSummary(userId) {
     caption: 'this month',
     href: '/(tabs)/money',
   };
-}
+} 

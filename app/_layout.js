@@ -1,57 +1,43 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { supabase } from '../src/lib/supabase';
+import { useEffect } from 'react';
+
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { ThemeProvider } from '../src/context/ThemeContext';
 
-export default function RootLayout() {
+function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
-
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-
-      setSession(data.session);
-      setLoading(false);
-    };
-
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { session, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
 
     const currentGroup = segments[0];
 
-    // User is logged in
     if (session && currentGroup !== '(tabs)') {
       router.replace('/(tabs)/dashboard');
     }
 
-    // User is logged out
     if (!session && currentGroup === '(tabs)') {
       router.replace('/');
     }
   }, [session, loading, segments]);
 
   return (
-    <ThemeProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    />
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <RootNavigator />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

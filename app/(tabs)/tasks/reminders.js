@@ -17,22 +17,35 @@ import { getCurrentUserId } from '../../../src/features/tasks/api';
 import {
   getReminders,
   createReminder,
+  updateReminder,
   deleteReminder,
 } from '../../../src/features/tasks/reminders-api';
 
+import {
+  scheduleReminderNotification,
+  cancelReminderNotification,
+} from '../../../src/features/tasks/notifications';
+
 export default function Reminders() {
   const [reminders, setReminders] = useState([]);
+
   const [title, setTitle] = useState('');
   const [remindAt, setRemindAt] = useState(new Date());
   const [repeatRule, setRepeatRule] = useState('none');
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingReminderId, setEditingReminderId] =
+    useState(null);
+
+  const [showDatePicker, setShowDatePicker] =
+    useState(false);
+  const [showTimePicker, setShowTimePicker] =
+    useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [validationError, setValidationError] = useState('');
+  const [validationError, setValidationError] =
+    useState('');
 
   const loadReminders = async () => {
     setLoading(true);
@@ -67,6 +80,14 @@ export default function Reminders() {
     }, [])
   );
 
+  const resetForm = () => {
+    setTitle('');
+    setRepeatRule('none');
+    setRemindAt(new Date());
+    setEditingReminderId(null);
+    setValidationError('');
+  };
+
   const saveReminder = async () => {
     const trimmedTitle = title.trim();
 
@@ -82,6 +103,13 @@ export default function Reminders() {
       return;
     }
 
+    if (remindAt <= new Date()) {
+      setValidationError(
+        'Reminder date and time must be in the future.'
+      );
+      return;
+    }
+
     setValidationError('');
     setSaving(true);
 
@@ -93,15 +121,118 @@ export default function Reminders() {
       return;
     }
 
-    const result = await createReminder(userResult.userId, {
-      title: trimmedTitle,
-      remind_at: remindAt.toISOString(),
-      repeat_rule: repeatRule,
-    });
+    const remindAtIso = remindAt.toISOString();
 
-    setSaving(false);
+    if (editingReminderId) {
+      const existingReminder = reminders.find(
+        (item) => item.id === editingReminderId
+      );
+
+      if (!existingReminder) {
+        setSaving(false);
+        Alert.alert(
+          'Error',
+          'The reminder could not be found.'
+        );
+        return;
+      }
+
+      const notificationResult =
+        await scheduleReminderNotification({
+          title: trimmedTitle,
+          remindAt: remindAtIso,
+          repeatRule,
+        });
+
+      if (
+        notificationResult.error ||
+        !notificationResult.notificationId
+      ) {
+        setSaving(false);
+        Alert.alert(
+          'Could not schedule notification',
+          notificationResult.error?.message ||
+            'Notification could not be scheduled.'
+        );
+        return;
+      }
+
+      const result = await updateReminder(
+        editingReminderId,
+        userResult.userId,
+        {
+          title: trimmedTitle,
+          remind_at: remindAtIso,
+          repeat_rule: repeatRule,
+          notification_id:
+            notificationResult.notificationId,
+        }
+      );
+
+      if (result.error) {
+        await cancelReminderNotification(
+          notificationResult.notificationId
+        );
+
+        setSaving(false);
+
+        Alert.alert(
+          'Could not update reminder',
+          result.error.message
+        );
+        return;
+      }
+
+      if (existingReminder.notification_id) {
+        await cancelReminderNotification(
+          existingReminder.notification_id
+        );
+      }
+
+      setSaving(false);
+      resetForm();
+      loadReminders();
+      return;
+    }
+
+    const notificationResult =
+      await scheduleReminderNotification({
+        title: trimmedTitle,
+        remindAt: remindAtIso,
+        repeatRule,
+      });
+
+    if (
+      notificationResult.error ||
+      !notificationResult.notificationId
+    ) {
+      setSaving(false);
+      Alert.alert(
+        'Could not schedule notification',
+        notificationResult.error?.message ||
+          'Notification could not be scheduled.'
+      );
+      return;
+    }
+
+    const result = await createReminder(
+      userResult.userId,
+      {
+        title: trimmedTitle,
+        remind_at: remindAtIso,
+        repeat_rule: repeatRule,
+        notification_id:
+          notificationResult.notificationId,
+      }
+    );
 
     if (result.error) {
+      await cancelReminderNotification(
+        notificationResult.notificationId
+      );
+
+      setSaving(false);
+
       Alert.alert(
         'Could not create reminder',
         result.error.message
@@ -109,11 +240,17 @@ export default function Reminders() {
       return;
     }
 
-    setTitle('');
-    setRepeatRule('none');
-    setRemindAt(new Date());
-
+    setSaving(false);
+    resetForm();
     loadReminders();
+  };
+
+  const startEditing = (reminder) => {
+    setEditingReminderId(reminder.id);
+    setTitle(reminder.title);
+    setRemindAt(new Date(reminder.remind_at));
+    setRepeatRule(reminder.repeat_rule || 'none');
+    setValidationError('');
   };
 
   const handleDelete = (reminder) => {
@@ -155,11 +292,23 @@ export default function Reminders() {
               return;
             }
 
+            if (reminder.notification_id) {
+              await cancelReminderNotification(
+                reminder.notification_id
+              );
+            }
+
             setReminders((current) =>
               current.filter(
                 (item) => item.id !== reminder.id
               )
             );
+
+            if (
+              editingReminderId === reminder.id
+            ) {
+              resetForm();
+            }
           },
         },
       ]
@@ -298,10 +447,19 @@ export default function Reminders() {
             title={
               saving
                 ? 'Saving...'
-                : 'Add Reminder'
+                : editingReminderId
+                  ? 'Update Reminder'
+                  : 'Add Reminder'
             }
             onPress={saveReminder}
           />
+
+          {editingReminderId ? (
+            <Button
+              title="Cancel Edit"
+              onPress={resetForm}
+            />
+          ) : null}
         </View>
 
         <View style={{ marginTop: 24 }}>
@@ -364,6 +522,13 @@ export default function Reminders() {
                 <Text>
                   Repeat: {reminder.repeat_rule}
                 </Text>
+
+                <Button
+                  title="Edit"
+                  onPress={() =>
+                    startEditing(reminder)
+                  }
+                />
 
                 <Button
                   title="Delete"

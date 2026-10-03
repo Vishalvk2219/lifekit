@@ -29,6 +29,7 @@ export async function createReminder(userId, reminder) {
       title: reminder.title,
       remind_at: reminder.remind_at,
       repeat_rule: reminder.repeat_rule || 'none',
+      notification_id: reminder.notification_id || null,
     })
     .select()
     .single();
